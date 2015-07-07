@@ -1,9 +1,10 @@
 import numpy as np
-import cv2
-#from matplotlib import pyplot as plt
-#import os
+# from matplotlib import pyplot as plt
 
-#os.chdir(os.path.dirname(os.path.abspath(__file__)))
+# wierd thing required for cv2 to work
+import sys
+sys.path.append('/usr/local/lib/python2.7/site-packages')
+import cv2
 
 # Hue detction range
 hueMin = 0
