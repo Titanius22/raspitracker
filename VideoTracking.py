@@ -1,4 +1,7 @@
 import numpy as np
+from picamera.array import PiRGBArray
+from picamera import PiCamera
+import time
 # from matplotlib import pyplot as plt
 
 # wierd thing required for cv2 to work
@@ -57,7 +60,7 @@ while(1):
     camera.capture(rawCapture, format="bgr")
     frame = rawCapture.array
 
-    if ((frame != None) and (ret = True)):
+    if ((frame != None) and (ret == True)):
         hsv = cv2.cvtColor(frame, cv2.COLOR_BGR2HSV)
         dst = cv2.calcBackProject([hsv],[0],roi_hist,[0,180],1)
         
