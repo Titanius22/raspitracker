@@ -24,17 +24,23 @@ Purple 140-155
 Red 160-180
 """
 
-cap = cv2.VideoCapture(0)
+# initialize the camera and grab a referance to the raw camera capture
+camera = PiCamera()
+rawCapture = PiRGBArray(camera)
+
+# allow camera to warm up
+time.sleep(0.1)
 
 # take first frame of the video
-ret,frame = cap.read()
+camera.capture(rawCapture, format="bgr")
+frame = rawCapture.array
 
 # setup initial location of window
 r,h,c,w = 250,90,400,125  # simply hardcoded the values
 track_window = (c,r,w,h)
 
 # set up the ROI for tracking
-roi = frame[r:r+h, c:c+w] #creat smaller frame
+roi = frame[r:r+h, c:c+w] #create smaller frame
 hsv_roi =  cv2.cvtColor(frame, cv2.COLOR_BGR2HSV) #convert to HSV
 
 mask = cv2.inRange(hsv_roi, lower_hue, upper_hue) #np.array((0., 60.,32.)), np.array((180.,255.,255.))
@@ -48,9 +54,10 @@ res = cv2.bitwise_and(frame,frame, mask= mask)
 term_crit = ( cv2.TERM_CRITERIA_EPS | cv2.TERM_CRITERIA_COUNT, 10, 1 )
 
 while(1):
-    ret ,frame = cap.read()
+    camera.capture(rawCapture, format="bgr")
+    frame = rawCapture.array
 
-    if ret == True:
+    if ((frame != None) and (ret = True)):
         hsv = cv2.cvtColor(frame, cv2.COLOR_BGR2HSV)
         dst = cv2.calcBackProject([hsv],[0],roi_hist,[0,180],1)
         
@@ -78,4 +85,4 @@ while(1):
         break
 
 cv2.destroyAllWindows()
-cap.release()
+camera.close()
