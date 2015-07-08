@@ -60,13 +60,14 @@ term_crit = ( cv2.TERM_CRITERIA_EPS | cv2.TERM_CRITERIA_COUNT, 10, 1 )
 while(1):
     
     # empty image buffer
-    #rawCapture.truncate(0) 
+    rawCapture.truncate(0) 
     
     # capture and retrieve frame
     camera.capture(rawCapture, format="bgr")
+    #camera.capture(rawCapture, use_video_port=True, format="bgr")
     frame = rawCapture.array
 
-    if ((frame != None) and (ret == True)):
+    if frame.size:
         hsv = cv2.cvtColor(frame, cv2.COLOR_BGR2HSV)
         dst = cv2.calcBackProject([hsv],[0],roi_hist,[0,180],1)
         
@@ -74,6 +75,8 @@ while(1):
 
         # Apply meanshift to get the new location
         ret, track_window = cv2.meanShift(dst, track_window, term_crit)
+        if ret != True:
+            break
         
         # The change  X and Y 
         #deltaPos = cv2.subtract((track_window[0],track_window[1]), (preShift[0], preShift[1]))
