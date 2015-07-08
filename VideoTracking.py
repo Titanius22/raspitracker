@@ -29,6 +29,7 @@ Red 160-180
 
 # initialize the camera and grab a referance to the raw camera capture
 camera = PiCamera()
+camera.resolution = (1920, 1080) ##########Could maybe change later
 rawCapture = PiRGBArray(camera)
 
 # allow camera to warm up
@@ -57,6 +58,11 @@ res = cv2.bitwise_and(frame,frame, mask= mask)
 term_crit = ( cv2.TERM_CRITERIA_EPS | cv2.TERM_CRITERIA_COUNT, 10, 1 )
 
 while(1):
+    
+    # empty image buffer
+    #rawCapture.truncate(0) 
+    
+    # capture and retrieve frame
     camera.capture(rawCapture, format="bgr")
     frame = rawCapture.array
 
