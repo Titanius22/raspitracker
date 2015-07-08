@@ -57,7 +57,7 @@ res = cv2.bitwise_and(frame,frame, mask= mask)
 # Setup the termination criteria, either 10 iteration or move by atleast 1 pt
 term_crit = ( cv2.TERM_CRITERIA_EPS | cv2.TERM_CRITERIA_COUNT, 10, 1 )
 
-while(1):
+while(True):
     
     # empty image buffer
     rawCapture.truncate(0) 
@@ -67,7 +67,7 @@ while(1):
     #camera.capture(rawCapture, use_video_port=True, format="bgr")
     frame = rawCapture.array
 
-    if frame.size:
+    if frame.size: #if array has number then its true
         hsv = cv2.cvtColor(frame, cv2.COLOR_BGR2HSV)
         dst = cv2.calcBackProject([hsv],[0],roi_hist,[0,180],1)
         
@@ -76,6 +76,7 @@ while(1):
         # Apply meanshift to get the new location
         ret, track_window = cv2.meanShift(dst, track_window, term_crit)
         if ret != True:
+            print "ret is not True"
             break
         
         # The change  X and Y 
@@ -89,11 +90,13 @@ while(1):
 
         k = cv2.waitKey(60) & 0xff
         if k == 27:
+            print "Escape key was pressed"
             break
         else:
             cv2.imwrite(chr(k)+".jpg",img2)
 
     else:
+        print "Frame array was empty"
         break
 
 cv2.destroyAllWindows()
