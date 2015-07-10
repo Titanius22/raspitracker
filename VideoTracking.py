@@ -9,6 +9,15 @@ import sys
 sys.path.append('/usr/local/lib/python2.7/site-packages')
 import cv2
 
+#Resolution
+camWidth = 320
+camHeight = 240
+
+#Track box size
+trackWidth = 60
+trackHeight = 50
+
+
 # Hue detction range
 hueMin = 0
 hueMax = 15
@@ -28,31 +37,28 @@ Red 160-180
 """
 
 # initialize the camera and grab a referance to the raw camera capture
-with picamera.PiCamera() as camera:
-    with picamera.array.PiRGBArray(camera) as stream:
-        camera.resolution = (1920, 1080)
-        camera.capture(rawCapture, 'bgr', use_video_port=True)     
+with PiCamera() as camera:
+    with PiRGBArray(camera) as rawCapture:
+        camera.resolution = (camWidth, camHeight)
 
         # take first frame of the video
-        camera.capture(rawCapture, format="bgr")
+        camera.capture(rawCapture, 'bgr', use_video_port=True)     
         frame = rawCapture.array
-        
-        cv2.imshow('frame', frame)
 
         # setup initial location of window
-        r,h,c,w = 250,90,400,125  # simply hardcoded the values
+        r,h,c,w = (.5*(camHeight-trackHeight)), trackHeight, (.5*(camWidth-trackWidth)), trackWidth  # Defined above
         track_window = (c,r,w,h)
 
         # set up the ROI for tracking
         roi = frame[r:r+h, c:c+w] #create smaller frame
-        hsv_roi =  cv2.cvtColor(frame, cv2.COLOR_BGR2HSV) #convert to HSV
+        hsv_roi =  cv2.cvtColor(roi, cv2.COLOR_BGR2HSV) #convert to HSV
 
         mask = cv2.inRange(hsv_roi, lower_hue, upper_hue) #np.array((0., 60.,32.)), np.array((180.,255.,255.))
         roi_hist = cv2.calcHist([hsv_roi],[0],mask,[180],[0,180]) #([hsv_roi],[0],mask,[180],[0,180])
         cv2.normalize(roi_hist,roi_hist,0,255,cv2.NORM_MINMAX)
 
         # Bitwise-AND mask and original image
-        res = cv2.bitwise_and(frame,frame, mask= mask)
+        #res = cv2.bitwise_and(frame,frame, mask= mask)
 
         # Setup the termination criteria, either 10 iteration or move by atleast 1 pt
         term_crit = ( cv2.TERM_CRITERIA_EPS | cv2.TERM_CRITERIA_COUNT, 10, 1 )
@@ -86,9 +92,9 @@ with picamera.PiCamera() as camera:
 
                 # Draw it on image
                 x,y,w,h = track_window
-                img2 = cv2.rectangle(frame, (x,y), (x+w,y+h), 255,2)
+                cv2.rectangle(frame, (x,y), (x+w,y+h), 255,2)
         
-                cv2.imshow('img2',img2)
+                cv2.imshow('Tracking',frame)
 
                 k = cv2.waitKey(60) & 0xff
                 if k == 27:
