@@ -11,11 +11,24 @@ import numpy as np
 from picamera.array import PiRGBArray
 from picamera import PiCamera
 import time
+from Adafruit_PWM_Servo_Driver import PWM
+import RPi.GPIO as GPIO
 
 # wierd thing required for cv2 to work
 import sys
 sys.path.append('/usr/local/lib/python2.7/site-packages')
 import cv2
+
+# Servo settings
+#ServoLR = PWM(0x40)
+#ServoLR.setPWMFreq(50)
+#ServoLRmin = 1055 # microsecond 80 degress from center
+
+#ServoLeftRight.setPWM(15, 1024, 3072) # channel, on, off
+
+#ServoUD = PWM(0x40)
+#ServoUD.setPWMFreq(50)
+#ServoUpDown.setPWM(15, 1024, 3072) # channel, on, off
 
 # How ofter will it check for 'reset'
 resetCounter = 5
@@ -31,7 +44,7 @@ trackHeight = 50
 
 # Hue detction range
 hueMin = 0
-hueMax = 15
+hueMax = 180
 lower_hue = np.array([hueMin, 50, 50], dtype=np.uint8)
 upper_hue = np.array([hueMax,255,255], dtype=np.uint8)
 
@@ -47,16 +60,33 @@ Purple 140-155
 Red 160-180
 """
 
+# Use GPIO numbering
+GPIO.setmode(GPIO.BCM)
+ 
+# Set GPIO for camera LED
+# Use 5 for Model A/B and 32 for Model B+
+CAMLED = 32
+ 
+# Set GPIO to output
+GPIO.setup(CAMLED, GPIO.OUT, initial=False) 
+ 
+
+
+
 def Calibrate_NewObject():
     
-    # Make servo shake
-    
-    # Give time for object to back away
-    time.sleep(.4)
+    # Tells user reset was set and to pull object away
+    GPIO.output(CAMLED,False) # Off
     
     # empty image buffer
     rawCapture.seek(0) 
     rawCapture.truncate()
+    
+    # Give time for object to back away
+    time.sleep(2)
+    
+    # Tells user camera is active again
+    GPIO.output(CAMLED,True) # Off
     
     # campure a frame of the video
     camera.capture(rawCapture, 'bgr', use_video_port=True)     
@@ -124,8 +154,10 @@ with PiCamera() as camera:
                 ret, track_window = cv2.meanShift(dst, track_window, term_crit)
         
                 # The change  X and Y. posative isup and to the right
-                deltaPos = cv2.subtract((track_window[0],track_window[1]), (preShift[0], preShift[1]))
-                print deltaPos
+                dx = track_window[0] - preShift[0]
+                dy = track_window[1] - preShift[1]
+                
+                # Tells servos to move
 
                 # Draw it on image
                 x,y,w,h = track_window
