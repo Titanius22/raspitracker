@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 """
 TODO
 -make function to tell servos to move 
@@ -11,35 +12,72 @@ import numpy as np
 from picamera.array import PiRGBArray
 from picamera import PiCamera
 import time
-from Adafruit_PWM_Servo_Driver import PWM
 import RPi.GPIO as GPIO
 
-# wierd thing required for cv2 to work
+# add paths to make some things work
 import sys
+
 sys.path.append('/usr/local/lib/python2.7/site-packages')
 import cv2
 
-# Servo settings
-#ServoLR = PWM(0x40)
-#ServoLR.setPWMFreq(50)
-#ServoLRmin = 1055 # microsecond 80 degress from center
+sys.path.append('/home/pi/Adafruit-Raspberry-Pi-Python-Code,Adafruit_PWM_Servo_Driver')
+from Adafruit_PWM_Servo_Driver import PWM
 
-#ServoLeftRight.setPWM(15, 1024, 3072) # channel, on, off
+##############################################################
+                    # Servo settings
 
-#ServoUD = PWM(0x40)
-#ServoUD.setPWMFreq(50)
-#ServoUpDown.setPWM(15, 1024, 3072) # channel, on, off
+#ServoDeadBand = 10 # microseconds
+#ServoStepsPerMove = 3 # 11.27µs
+ServoFreq = 65 # Hz. gives 3.756 microsecond per step resolution (4096 steps)
+
+ServoLR = PWM(0x40)
+ServoLR.setPWMFreq(ServoFreq)
+ServoLRpin = 12
+ServoLRmiddle = 400 # step count. 1502µs
+ServoLRmin = ServoLRmiddle - 117 # step count. 1063µs. 79° from middle
+ServoLRmin =  ServoLRmiddle + 117 # step count. 1942µs. 79° from middle
+ServoLRpos = ServoLRmiddle
+ServoLR.setPWM(ServoLRpin, 1024, 3072) # channel, on, off
+
+ServoUD = PWM(0x40)
+ServoUD.setPWMFreq(ServoFreq)
+ServoUDpin = 12
+ServoUDmiddle = 1500
+ServoUmin = ServoUDmiddle - 445 # microsecond, 80 degress from center
+ServoUDmin =  ServoUDmiddle + 445 # microsecond, 80 degress from center
+ServoUDpos = ServoUDmiddle
+ServoUD.setPWM(ServoUDpin, 1024, 3072) # channel, on, off
+
+# I am writing this to explain my math and reasoning.
+#
+# With a resolution of 4096 steps and a chosen frequency of 65 Hz,
+# the pulse length of each step is 3.756 microseconds. So...
+#     Deadband is 10µs so each move will be 3 steps or 11.27µs
+#     Covers 79° either direction within 117 steps
+#     39 moves one direction (117 steps / 3 steps per mover) makes 2.03° per move
+#     Middle is 1500 microseconds or 400 steps (1502µs)
+#     One extreme is 280 steps (1063µs)
+#     The other is 517 steps (1942µs)
+
+def MoveLeft():
+    ServoLR.setPWM(ServoLRpin, 1024, 4095-) # channel, on, off
+
+
+
+##############################################################
+
 
 # How ofter will it check for 'reset'
 resetCounter = 5
 
-#Resolution
-camWidth = 320
-camHeight = 240
+# Resolution (native 2592 x 1944)
+# Field of View 53.5 x 41.4
+camWidth = 324
+camHeight = 243
 
 #Track box size
-trackWidth = 60
-trackHeight = 50
+trackWidth = 50
+trackHeight = 40
 
 
 # Hue detction range
@@ -71,8 +109,6 @@ CAMLED = 32
 GPIO.setup(CAMLED, GPIO.OUT, initial=False) 
  
 
-
-
 def Calibrate_NewObject():
     
     # Tells user reset was set and to pull object away
@@ -86,7 +122,7 @@ def Calibrate_NewObject():
     time.sleep(2)
     
     # Tells user camera is active again
-    GPIO.output(CAMLED,True) # Off
+    GPIO.output(CAMLED,True) # On
     
     # campure a frame of the video
     camera.capture(rawCapture, 'bgr', use_video_port=True)     
@@ -106,6 +142,13 @@ def Calibrate_NewObject():
     
     return track_window, roi_hist
 
+
+# Tells user camera is active again
+GPIO.output(CAMLED,True) # Turns on light
+
+# Sets servos to all direction center
+ServoLR.setPWM(ServoLRpin, ServoLRmiddle, 4095-ServoLRmiddle) # channel, on, off
+ServoUD.setPWM(ServoUDpin, ServoUDmiddle, 4095-ServoLRmiddle) # channel, on, off
 
 # initialize the camera and grab a referance to the raw camera capture
 with PiCamera() as camera:
@@ -173,12 +216,12 @@ with PiCamera() as camera:
                 # Used as a 'reset' button to start tracking new object TODO
                 resetCounter = resetCounter -1
                 if resetCounter == 0:
-                    test = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
-                    frameMean = int((cv2.meanStdDev(test))[0])
+                    test = cv2.cvtColor(frame[x:x+w,y:y+h], cv2.COLOR_BGR2GRAY)
+                    #frameMean = int((cv2.meanStdDev(test))[0])
                     frameStdDev = int((cv2.meanStdDev(test))[1])
                     if frameStdDev < 10:
                         track_window, roi_hist = Calibrate_NewObject()
-                        resetCounter = 5
+                    resetCounter = 5
 
             else:
                 print "Frame array was empty"
