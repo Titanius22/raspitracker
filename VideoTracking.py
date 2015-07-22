@@ -4,7 +4,8 @@ TODO
 -make function to tell servos to move 
 -make option to switch to face tracking
 -make the servo's shake when track is reset so the user knows to pull the object back
-
+-find numerical center of servos and calibrate 'center' variable
+-add tolerance for servo moving. 4° or greater
 
 
 """
@@ -12,6 +13,7 @@ import numpy as np
 from picamera.array import PiRGBArray
 from picamera import PiCamera
 import time
+import math
 import RPi.GPIO as GPIO
 
 # add paths to make some things work
@@ -23,12 +25,13 @@ import cv2
 sys.path.append('/home/pi/Adafruit-Raspberry-Pi-Python-Code,Adafruit_PWM_Servo_Driver')
 from Adafruit_PWM_Servo_Driver import PWM
 
-##############################################################
+########################################################################################
                     # Servo settings
 
 #ServoDeadBand = 10 # microseconds
-#ServoStepsPerMove = 3 # 11.27µs
+StepsPM = 3 # 11.27µs . Servo steps per move
 ServoFreq = 65 # Hz. gives 3.756 microsecond per step resolution (4096 steps)
+ServoTurnMargin = 4 # degrees or greater before servo moves.
 
 ServoLR = PWM(0x40)
 ServoLR.setPWMFreq(ServoFreq)
@@ -42,9 +45,9 @@ ServoLR.setPWM(ServoLRpin, 1024, 3072) # channel, on, off
 ServoUD = PWM(0x40)
 ServoUD.setPWMFreq(ServoFreq)
 ServoUDpin = 12
-ServoUDmiddle = 1500
-ServoUmin = ServoUDmiddle - 445 # microsecond, 80 degress from center
-ServoUDmin =  ServoUDmiddle + 445 # microsecond, 80 degress from center
+ServoUDmiddle = 400 # step count. 1502µs
+ServoUDmin = ServoUDmiddle - 117 # step count. 1063µs. 79° from middle
+ServoUDmin =  ServoUDmiddle + 117 # step count. 1942µs. 79° from middle
 ServoUDpos = ServoUDmiddle
 ServoUD.setPWM(ServoUDpin, 1024, 3072) # channel, on, off
 
@@ -58,13 +61,32 @@ ServoUD.setPWM(ServoUDpin, 1024, 3072) # channel, on, off
 #     Middle is 1500 microseconds or 400 steps (1502µs)
 #     One extreme is 280 steps (1063µs)
 #     The other is 517 steps (1942µs)
+#
+# ASSUME LEFT IS MIN
+# ASSUME DOWN IS MIN
 
-def MoveLeft():
-    ServoLR.setPWM(ServoLRpin, 1024, 4095-) # channel, on, off
+########################################################################################
+#                                    Fun Math
+#       ___x____
+#       \     /
+#     y \   /
+#       \θ/
 
 
+def calc_width_theta(pixelWidth):
+    y = (0.5 * camWidth)/math.sin(math.radians(26.75)) # The 26.75 is half the width angle of the field of view of the camera
+    theta = math.degrees(math.asin(pixelWidth/y))
+    return theta
+    
+def calc_height_theta(pixelHeight):
+    y = (0.5 * camHeight)/math.sin(math.radians(20.7)) # The 20.7 is half the width angle of the field of view of the camera
+    theta = math.degrees(math.asin(pixelHeight/y))
+    return theta
+    
+def round_to_even(x):
+    return round(x/2.0)*2
 
-##############################################################
+########################################################################################
 
 
 # How ofter will it check for 'reset'
@@ -190,17 +212,27 @@ with PiCamera() as camera:
             if frame.size: #if array has numbers then its true
                 hsv = cv2.cvtColor(frame, cv2.COLOR_BGR2HSV)
                 dst = cv2.calcBackProject([hsv],[0],roi_hist,[0,180],1)
-        
-                preShift = track_window
 
                 # Apply meanshift to get the new location
                 ret, track_window = cv2.meanShift(dst, track_window, term_crit)
         
-                # The change  X and Y. posative isup and to the right
-                dx = track_window[0] - preShift[0]
-                dy = track_window[1] - preShift[1]
+                # Calculates dx and dy in pixels of box with respect to original bottom left corner of box. Positive is up and to the right
+                dx = track_window[0] - c # calculate dx in pixels of box with respect to center at beginning
+                dy = track_window[1] - r # calculate dy in pixels of box with respect to center at beginning
+                
+                # Calculates dθx and dθy then rounds to nearest even number
+                dThetaX = round_to_even(calc_width_theta(dx))
+                dThetaY = round_to_even(calc_height_theta(dy))
+                
+                # Calculates steps and new location of servos. 3 (StepsPM) steps per 2°
+                xSteps = (dThetaX/2)*StepsPM
+                ySteps = (dThetaY/2)*StepsPM
                 
                 # Tells servos to move
+                if (xSteps >= ServoTurnMargin): 
+                    ServoLR.setPWM(ServoLRpin, (ServoLRmiddle + xSteps), (4095 - (ServoLRmiddle + xSteps))) # channel, on, off
+                if (ySteps >= ServoTurnMargin):
+                    ServoUD.setPWM(ServoUDpin, (ServoUDmiddle + ySteps), (4095 - (ServoUDmiddle + ySteps))) # channel, on, off
 
                 # Draw it on image
                 x,y,w,h = track_window
