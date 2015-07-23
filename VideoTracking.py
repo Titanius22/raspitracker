@@ -6,7 +6,8 @@ TODO
 -make the servo's shake when track is reset so the user knows to pull the object back
 -find numerical center of servos and calibrate 'center' variable
 -add tolerance for servo moving. 4° or greater
-
+-add checks for sero max and min limits
+-Check servooUD setting
 
 """
 import numpy as np
@@ -38,7 +39,7 @@ ServoLR.setPWMFreq(ServoFreq)
 ServoLRpin = 12
 ServoLRmiddle = 400 # step count. 1502µs
 ServoLRmin = ServoLRmiddle - 117 # step count. 1063µs. 79° from middle
-ServoLRmin =  ServoLRmiddle + 117 # step count. 1942µs. 79° from middle
+ServoLRmax =  ServoLRmiddle + 117 # step count. 1942µs. 79° from middle
 ServoLRpos = ServoLRmiddle
 ServoLR.setPWM(ServoLRpin, 1024, 3072) # channel, on, off
 
@@ -47,7 +48,7 @@ ServoUD.setPWMFreq(ServoFreq)
 ServoUDpin = 12
 ServoUDmiddle = 400 # step count. 1502µs
 ServoUDmin = ServoUDmiddle - 117 # step count. 1063µs. 79° from middle
-ServoUDmin =  ServoUDmiddle + 117 # step count. 1942µs. 79° from middle
+ServoUDmax =  ServoUDmiddle + 117 # step count. 1942µs. 79° from middle
 ServoUDpos = ServoUDmiddle
 ServoUD.setPWM(ServoUDpin, 1024, 3072) # channel, on, off
 
@@ -229,10 +230,25 @@ with PiCamera() as camera:
                 ySteps = (dThetaY/2)*StepsPM
                 
                 # Tells servos to move
-                if (xSteps >= ServoTurnMargin): 
-                    ServoLR.setPWM(ServoLRpin, (ServoLRmiddle + xSteps), (4095 - (ServoLRmiddle + xSteps))) # channel, on, off
+                if (xSteps >= ServoTurnMargin):
+                    ServoLRpos = ServoLRpos + xSteps
+                    if (ServoLRpos < ServoLRmin): # Assumes left is min
+                        ServoLRpos = ServoLRmin
+                    if (ServoLRpos > ServoLRmax):
+                        ServoLRpos = ServoLRmax
+                    #elif ((ServoLRpos == ServoLRmax) or (ServoLRpos == ServoLRmax)):
+                        # If they equal either limit
+                    ServoLR.setPWM(ServoLRpin, ServoLRpos, (4095 - ServoLRpos)) # channel, on, off
+                    
                 if (ySteps >= ServoTurnMargin):
-                    ServoUD.setPWM(ServoUDpin, (ServoUDmiddle + ySteps), (4095 - (ServoUDmiddle + ySteps))) # channel, on, off
+                    ServoUDpos = ServoUDpos + ySteps
+                    if (ServoUDpos < ServoUDmin): # Assumes left is min
+                        ServoUDpos = ServoUDmin
+                    if (ServoUDpos > ServoUDmax):
+                        ServoUDpos = ServoUDmax
+                    #elif ((ServoUDpos == ServoUDmax) or (ServoUDpos == ServoUDmax)):
+                        # If they equal either limit
+                    ServoLR.setPWM(ServoUDpin, ServoUDpos, (4095 - ServoUDpos)) # channel, on, off
 
                 # Draw it on image
                 x,y,w,h = track_window
