@@ -25,7 +25,7 @@ ServoLR.setPWM(ServoLRpin, 1024, 3072) # channel, on, off
 
 ServoUD = PWM(0x40)
 ServoUD.setPWMFreq(ServoFreq)
-ServoUDpin = 12
+ServoUDpin = 13
 ServoUDmiddle = 400 # step count. 1502µs
 ServoUDmin = ServoUDmiddle - 117 # step count. 1063µs. 79° from middle
 ServoUDmax =  ServoUDmiddle + 117 # step count. 1942µs. 79° from middle

@@ -23,7 +23,7 @@ import sys
 sys.path.append('/usr/local/lib/python2.7/site-packages')
 import cv2
 
-sys.path.append('/home/pi/Adafruit-Raspberry-Pi-Python-Code,Adafruit_PWM_Servo_Driver')
+sys.path.append('/home/pi/Adafruit-Raspberry-Pi-Python-Code/Adafruit_PWM_Servo_Driver')
 from Adafruit_PWM_Servo_Driver import PWM
 
 ########################################################################################
@@ -137,19 +137,28 @@ def Calibrate_NewObject():
     # Tells user reset was set and to pull object away
     GPIO.output(CAMLED,False) # Off
     
-    # empty image buffer
-    rawCapture.seek(0) 
-    rawCapture.truncate()
-    
     # Give time for object to back away
     time.sleep(2)
     
-    # Tells user camera is active again
+    # Tells user that camera is active again and trying to find a good frame
     GPIO.output(CAMLED,True) # On
+    time.sleep(.5)
+    GPIO.output(CAMLED,False) # Off
     
-    # campure a frame of the video
-    camera.capture(rawCapture, 'bgr', use_video_port=True)     
-    frame = rawCapture.array
+    while(True):
+        # empty image buffer
+        rawCapture.seek(0) 
+        rawCapture.truncate()
+    
+        # Capture a frame of the video
+        camera.capture(rawCapture, 'bgr', use_video_port=True)     
+        frame = rawCapture.array
+        
+        if (Get_Frame_StdDev(frame) > 30):
+            break
+    
+    # Tells user that camera is active found a good frame        
+    GPIO.output(CAMLED,True) # On
 
     # setup initial location of window
     r,h,c,w = int(.5*(camHeight-trackHeight)), trackHeight, int(.5*(camWidth-trackWidth)), trackWidth  # Defined above. used int() to keep type integer
@@ -165,6 +174,10 @@ def Calibrate_NewObject():
     
     return track_window, roi_hist
 
+
+def Get_Frame_StdDev(chosenFrame):
+    test = cv2.cvtColor(chosenFrame, cv2.COLOR_BGR2GRAY)
+    return int((cv2.meanStdDev(test))[1])
 
 # Tells user camera is active again
 GPIO.output(CAMLED,True) # Turns on light
@@ -266,7 +279,7 @@ with PiCamera() as camera:
                 if resetCounter == 0:
                     test = cv2.cvtColor(frame[x:x+w,y:y+h], cv2.COLOR_BGR2GRAY)
                     #frameMean = int((cv2.meanStdDev(test))[0])
-                    frameStdDev = int((cv2.meanStdDev(test))[1])
+                    frameStdDev = Get_Frame_StdDev(frame)
                     if frameStdDev < 10:
                         track_window, roi_hist = Calibrate_NewObject()
                     resetCounter = 5
