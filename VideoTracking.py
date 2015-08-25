@@ -30,7 +30,7 @@ from Adafruit_PWM_Servo_Driver import PWM
                     # Servo settings
 
 #ServoDeadBand = 10 # microseconds
-StepsPM = 3 # 11.27µs . Servo steps per move
+StepsPM = 6 # 11.27µs . Servo steps per move
 ServoFreq = 65 # Hz. gives 3.756 microsecond per step resolution (4096 steps)
 ServoTurnMargin = 4 # degrees or greater before servo moves.
 
@@ -38,19 +38,15 @@ ServoLR = PWM(0x40)
 ServoLR.setPWMFreq(ServoFreq)
 ServoLRpin = 12
 ServoLRmiddle = 496 # step count. 1502µs
-ServoLRmin = ServoLRmiddle - 237 # step count. 1063µs. 79° from middle
-ServoLRmax =  ServoLRmiddle + 237 # step count. 1942µs. 79° from middle
-ServoLRpos = ServoLRmiddle
-#ServoLR.setPWM(ServoLRpin, 0, ServoLRmiddle) # channel, time it turns on, time it turns off
+ServoLRmin = ServoLRmiddle - 234 # step count. 1063µs. 79° from middle
+ServoLRmax =  ServoLRmiddle + 234 # step count. 1942µs. 79° from middle
 
 ServoUD = PWM(0x40)
 ServoUD.setPWMFreq(ServoFreq)
 ServoUDpin = 13
-ServoUDmiddle = 496 # step count. 1502µs
-ServoUDmin = ServoUDmiddle - 237 # step count. 1063µs. 79° from middle
-ServoUDmax =  ServoUDmiddle + 237 # step count. 1942µs. 79° from middle
-ServoUDpos = ServoUDmiddle
-#ServoUD.setPWM(ServoUDpin, 0, ServoUDmiddle) # channel, time it turns on, time it turns off
+ServoUDmiddle = 463 # step count. 1502µs
+ServoUDmin = ServoUDmiddle - 183 # step count. 1063µs. 79° from middle
+ServoUDmax =  ServoUDmiddle + 183 # step count. 1942µs. 79° from middle
 
 # I am writing this to explain my math and reasoning.
 #
@@ -63,13 +59,19 @@ ServoUDpos = ServoUDmiddle
 #     One extreme is 280 steps (1063µs)
 #     The other is 517 steps (1942µs)
 #
-# ASSUME LEFT IS MIN
-# ASSUME DOWN IS MIN
+# ServoLR.setPWM(ServoLRpin, 0, ServoLRmiddle) # channel, time it turns on, time it turns off
+#
+# RIGHT IS MIN
+# UP IS MIN
 
 # EXPERIMENTALLY TESTED RESULTS
-#     Declared 259 as min, 733 as max
+#     ServoLR 
+#          Declared 262 as min, 730 as max
+#          Range is about 160°
 #   
-#
+#     ServoUP
+#          Declared 280 as min, 646 as max
+#          Range is about 
 #
 
 ########################################################################################
@@ -107,7 +109,6 @@ camHeight = 243
 #Track box size
 trackWidth = 50
 trackHeight = 40
-
 
 # Hue detction range
 hueMin = 0
@@ -190,7 +191,9 @@ GPIO.output(CAMLED,True) # Turns on light
 
 # Sets servos to all direction center
 ServoLR.setPWM(ServoLRpin, 0, ServoLRmiddle) # channel, on, off
+ServoLRpos = ServoLRmiddle
 ServoUD.setPWM(ServoUDpin, 0, ServoUDmiddle) # channel, on, off
+ServoUDpos = ServoUDmiddle
 
 # initialize the camera and grab a referance to the raw camera capture
 with PiCamera() as camera:
@@ -244,30 +247,30 @@ with PiCamera() as camera:
                 dThetaX = round_to_even(calc_width_theta(dx))
                 dThetaY = round_to_even(calc_height_theta(dy))
                 
-                # Calculates steps and new location of servos. 3 (StepsPM) steps per 2°
+                # Calculates steps and new location of servos. 6 (StepsPM) steps per 2°
                 xSteps = (dThetaX/2)*StepsPM
                 ySteps = (dThetaY/2)*StepsPM
                 
                 # Tells servos to move
                 if (xSteps >= ServoTurnMargin):
-                    ServoLRpos = ServoLRpos + xSteps
+                    ServoLRpos = ServoLRpos - xSteps # The minus '-' is because RIGHT is max not LEFT
                     if (ServoLRpos < ServoLRmin): # Assumes left is min
                         ServoLRpos = ServoLRmin
                     if (ServoLRpos > ServoLRmax):
                         ServoLRpos = ServoLRmax
                     #elif ((ServoLRpos == ServoLRmax) or (ServoLRpos == ServoLRmax)):
                         # If they equal either limit
-                    ServoLR.setPWM(ServoLRpin, ServoLRpos, (4095 - ServoLRpos)) # channel, on, off
+                    ServoLR.setPWM(ServoLRpin, 0, ServoLRpos) # channel, on, off
                     
                 if (ySteps >= ServoTurnMargin):
-                    ServoUDpos = ServoUDpos + ySteps
+                    ServoUDpos = ServoUDpos - ySteps # The minus '-' is because DOWN is max not LEFT
                     if (ServoUDpos < ServoUDmin): # Assumes left is min
                         ServoUDpos = ServoUDmin
                     if (ServoUDpos > ServoUDmax):
                         ServoUDpos = ServoUDmax
                     #elif ((ServoUDpos == ServoUDmax) or (ServoUDpos == ServoUDmax)):
                         # If they equal either limit
-                    ServoLR.setPWM(ServoUDpin, ServoUDpos, (4095 - ServoUDpos)) # channel, on, off
+                    ServoLR.setPWM(ServoUDpin, 0, ServoUDpos) # channel, on, off
 
                 # Draw it on image
                 x,y,w,h = track_window
