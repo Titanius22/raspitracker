@@ -37,18 +37,18 @@ ServoTurnMargin = 4 # degrees or greater before servo moves.
 ServoLR = PWM(0x40)
 ServoLR.setPWMFreq(ServoFreq)
 ServoLRpin = 12
-ServoLRmiddle = 400 # step count. 1502µs
-ServoLRmin = ServoLRmiddle - 117 # step count. 1063µs. 79° from middle
-ServoLRmax =  ServoLRmiddle + 117 # step count. 1942µs. 79° from middle
+ServoLRmiddle = 496 # step count. 1502µs
+ServoLRmin = ServoLRmiddle - 237 # step count. 1063µs. 79° from middle
+ServoLRmax =  ServoLRmiddle + 237 # step count. 1942µs. 79° from middle
 ServoLRpos = ServoLRmiddle
 #ServoLR.setPWM(ServoLRpin, 0, ServoLRmiddle) # channel, time it turns on, time it turns off
 
 ServoUD = PWM(0x40)
 ServoUD.setPWMFreq(ServoFreq)
 ServoUDpin = 13
-ServoUDmiddle = 400 # step count. 1502µs
-ServoUDmin = ServoUDmiddle - 117 # step count. 1063µs. 79° from middle
-ServoUDmax =  ServoUDmiddle + 117 # step count. 1942µs. 79° from middle
+ServoUDmiddle = 496 # step count. 1502µs
+ServoUDmin = ServoUDmiddle - 237 # step count. 1063µs. 79° from middle
+ServoUDmax =  ServoUDmiddle + 237 # step count. 1942µs. 79° from middle
 ServoUDpos = ServoUDmiddle
 #ServoUD.setPWM(ServoUDpin, 0, ServoUDmiddle) # channel, time it turns on, time it turns off
 
@@ -65,6 +65,12 @@ ServoUDpos = ServoUDmiddle
 #
 # ASSUME LEFT IS MIN
 # ASSUME DOWN IS MIN
+
+# EXPERIMENTALLY TESTED RESULTS
+#     Declared 259 as min, 733 as max
+#   
+#
+#
 
 ########################################################################################
 #                                    Fun Math
