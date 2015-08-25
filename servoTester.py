@@ -7,7 +7,7 @@ import RPi.GPIO as GPIO
 # add paths to make some things work
 import sys
 
-sys.path.append('/home/pi/Adafruit-Raspberry-Pi-Python-Code,Adafruit_PWM_Servo_Driver')
+sys.path.append('/home/pi/Adafruit-Raspberry-Pi-Python-Code/Adafruit_PWM_Servo_Driver')
 from Adafruit_PWM_Servo_Driver import PWM
 
 StepsPM = 3 # 11.27µs . Servo steps per move
@@ -32,13 +32,13 @@ ServoUDmax =  ServoUDmiddle + 117 # step count. 1942µs. 79° from middle
 ServoUDpos = ServoUDmiddle
 ServoUD.setPWM(ServoUDpin, 1024, 3072) # channel, on, off
 
-step = ServeLRmin
+step = ServoLRmin
 while (step <=  ServoLRmax):
-    ServoLR.setPWM(ServoLRpin, step, (4095 - step)) # channel, on, off
+    ServoLR.setPWM(ServoLRpin, 0, step) # channel, on, off
     step += StepsPM
     time.sleep(.1)
     
 while (step >=  ServoLRmin):
-    ServoLR.setPWM(ServoLRpin, step, (4095 - step)) # channel, on, off
+    ServoLR.setPWM(ServoLRpin, 0, step) # channel, on, off
     step -= StepsPM
     time.sleep(.1)

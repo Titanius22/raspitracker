@@ -41,16 +41,16 @@ ServoLRmiddle = 400 # step count. 1502µs
 ServoLRmin = ServoLRmiddle - 117 # step count. 1063µs. 79° from middle
 ServoLRmax =  ServoLRmiddle + 117 # step count. 1942µs. 79° from middle
 ServoLRpos = ServoLRmiddle
-ServoLR.setPWM(ServoLRpin, 1024, 3072) # channel, on, off
+#ServoLR.setPWM(ServoLRpin, 0, ServoLRmiddle) # channel, time it turns on, time it turns off
 
 ServoUD = PWM(0x40)
 ServoUD.setPWMFreq(ServoFreq)
-ServoUDpin = 12
+ServoUDpin = 13
 ServoUDmiddle = 400 # step count. 1502µs
 ServoUDmin = ServoUDmiddle - 117 # step count. 1063µs. 79° from middle
 ServoUDmax =  ServoUDmiddle + 117 # step count. 1942µs. 79° from middle
 ServoUDpos = ServoUDmiddle
-ServoUD.setPWM(ServoUDpin, 1024, 3072) # channel, on, off
+#ServoUD.setPWM(ServoUDpin, 0, ServoUDmiddle) # channel, time it turns on, time it turns off
 
 # I am writing this to explain my math and reasoning.
 #
@@ -183,8 +183,8 @@ def Get_Frame_StdDev(chosenFrame):
 GPIO.output(CAMLED,True) # Turns on light
 
 # Sets servos to all direction center
-ServoLR.setPWM(ServoLRpin, ServoLRmiddle, 4095-ServoLRmiddle) # channel, on, off
-ServoUD.setPWM(ServoUDpin, ServoUDmiddle, 4095-ServoLRmiddle) # channel, on, off
+ServoLR.setPWM(ServoLRpin, 0, ServoLRmiddle) # channel, on, off
+ServoUD.setPWM(ServoUDpin, 0, ServoUDmiddle) # channel, on, off
 
 # initialize the camera and grab a referance to the raw camera capture
 with PiCamera() as camera:
