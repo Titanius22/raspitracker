@@ -71,7 +71,13 @@ ServoUDmax =  ServoUDmiddle + 183 # step count. 1942µs. 79° from middle
 #   
 #     ServoUP
 #          Declared 280 as min, 646 as max
-#          Range is about 
+#          Range is about
+#
+#     I am implimenting a solution to the Servo not moving. I think its because each shift is to 
+#     small to register then, due to the current setup, distance moved is not recorded.
+#     My fix is to record servo "position" and the box's "position" seperatly. When the difference
+#     goes beyond the margin the servo moves and the numbers are synced.
+#
 #
 
 ########################################################################################
@@ -128,16 +134,6 @@ Purple 140-155
 Red 160-180
 """
 
-# Use GPIO numbering
-GPIO.setmode(GPIO.BCM)
- 
-# Set GPIO for camera LED
-# Use 5 for Model A/B and 32 for Model B+
-CAMLED = 32
- 
-# Set GPIO to output
-GPIO.setup(CAMLED, GPIO.OUT, initial=False) 
- 
 
 def Calibrate_NewObject():
     
@@ -186,8 +182,19 @@ def Get_Frame_StdDev(chosenFrame):
     test = cv2.cvtColor(chosenFrame, cv2.COLOR_BGR2GRAY)
     return int((cv2.meanStdDev(test))[1])
 
-# Tells user camera is active again
-GPIO.output(CAMLED,True) # Turns on light
+
+# Clear GPIO stuff
+#GPIO.cleanup()
+
+# Use GPIO numbering
+GPIO.setmode(GPIO.BCM)
+ 
+# Set GPIO for camera LED
+# Use 5 for Model A/B and 32 for Model B+
+CAMLED = 32
+ 
+# Set GPIO to output and turns it on telling the user camera is active
+GPIO.setup(CAMLED, GPIO.OUT, initial=False) 
 
 # Sets servos to all direction center
 ServoLR.setPWM(ServoLRpin, 0, ServoLRmiddle) # channel, on, off
@@ -195,11 +202,18 @@ ServoLRpos = ServoLRmiddle
 ServoUD.setPWM(ServoUDpin, 0, ServoUDmiddle) # channel, on, off
 ServoUDpos = ServoUDmiddle
 
+# Start recording "box's position"
+boxLRpos = ServoLRpos
+boxUDpos = ServoUDpos
+
 # initialize the camera and grab a referance to the raw camera capture
 with PiCamera() as camera:
     with PiRGBArray(camera) as rawCapture:
         camera.resolution = (camWidth, camHeight)
 
+        # Tells user camera is on
+        GPIO.output(CAMLED, True) # Onf
+        
         # take first frame of the video
         camera.capture(rawCapture, 'bgr', use_video_port=True)     
         frame = rawCapture.array
@@ -251,26 +265,30 @@ with PiCamera() as camera:
                 xSteps = (dThetaX/2)*StepsPM
                 ySteps = (dThetaY/2)*StepsPM
                 
+                # Addes the motion to box position varible
+                boxLRpos -= xSteps # The negative is due to right being greater
+                boxUDpos -= ySteps # The negative is due to down being greater
+                
                 # Tells servos to move
-                if (xSteps >= ServoTurnMargin):
-                    ServoLRpos = ServoLRpos - xSteps # The minus '-' is because RIGHT is max not LEFT
+                if (abs(ServoLRpos - boxLRpos) >= ServoTurnMargin):
+                    ServoLRpos = boxLRpos # The minus '-' is because RIGHT is max not LEFT
                     if (ServoLRpos < ServoLRmin): # Assumes left is min
                         ServoLRpos = ServoLRmin
                     if (ServoLRpos > ServoLRmax):
                         ServoLRpos = ServoLRmax
                     #elif ((ServoLRpos == ServoLRmax) or (ServoLRpos == ServoLRmax)):
                         # If they equal either limit
-                    ServoLR.setPWM(ServoLRpin, 0, ServoLRpos) # channel, on, off
+                    ServoLR.setPWM(ServoLRpin, 0, int(ServoLRpos)) # channel, on, off
                     
-                if (ySteps >= ServoTurnMargin):
-                    ServoUDpos = ServoUDpos - ySteps # The minus '-' is because DOWN is max not LEFT
+                if (abs(ServoUDpos - boxUDpos) >= ServoTurnMargin):
+                    ServoUDpos = boxUDpos # The minus '-' is because DOWN is max not LEFT
                     if (ServoUDpos < ServoUDmin): # Assumes left is min
                         ServoUDpos = ServoUDmin
                     if (ServoUDpos > ServoUDmax):
                         ServoUDpos = ServoUDmax
                     #elif ((ServoUDpos == ServoUDmax) or (ServoUDpos == ServoUDmax)):
                         # If they equal either limit
-                    ServoLR.setPWM(ServoUDpin, 0, ServoUDpos) # channel, on, off
+                    ServoLR.setPWM(ServoUDpin, 0, int(ServoUDpos)) # channel, on, off
 
                 # Draw it on image
                 x,y,w,h = track_window
